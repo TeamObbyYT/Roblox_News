@@ -1,4 +1,213 @@
-<html>
-  <title>In Progress</title>
-  <a>This website is in progress please wait until the website to be update</a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roblox News</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+  body { background: #121212; color: #f0f0f0; padding: 2rem; }
+  h1 { text-align: center; margin-bottom: 2rem; color: #00ffea; text-shadow: 0 0 10px #00ffea; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-bottom: 2rem; }
+  input[type="text"] { padding: 0.5rem 1rem; border-radius: 5px; border: none; width: 200px; }
+  select { padding: 0.5rem 1rem; border-radius: 5px; border: none; }
+
+  .pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-bottom: 2rem; }
+  .pill {
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    background: #222;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+  }
+  .pill[data-active="true"] { background: #00ffea; color: #121212; box-shadow: 0 0 10px #00ffea; }
+
+  #news { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+
+  .card {
+    background: #1e1e1e;
+    padding: 1rem;
+    border-radius: 10px;
+    position: relative;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 20px #00ffea50;
+  }
+
+  .meta { font-size: 0.8rem; color: #aaa; margin-bottom: 0.5rem; }
+  h3 { margin-bottom: 0.5rem; color: #00ffea; }
+  p { font-size: 0.9rem; margin-bottom: 0.8rem; line-height: 1.3; }
+
+  .taglist { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.8rem; }
+  .tag { font-size: 0.75rem; background: #333; padding: 0.2rem 0.5rem; border-radius: 5px; cursor: pointer; transition: all 0.2s; }
+  .tag:hover { background: #00ffea; color: #121212; }
+
+  a { text-decoration: none; font-weight: bold; }
+  a:hover { text-decoration: underline; }
+
+  .hidden { display: none; }
+
+  #empty { text-align: center; font-size: 1.2rem; margin-top: 2rem; color: #ff4c4c; text-shadow: 0 0 5px #ff4c4c50; }
+</style>
+</head>
+<body>
+
+<h1>Roblox News</h1>
+
+<div class="controls">
+  <input type="text" id="q" placeholder="Search news...">
+  <select id="sort">
+    <option value="new">Newest First</option>
+    <option value="old">Oldest First</option>
+    <option value="az">A → Z</option>
+    <option value="za">Z → A</option>
+  </select>
+</div>
+
+<div class="pills">
+  <div class="pill" data-filter="all" data-active="true" aria-pressed="true">All</div>
+  <div class="pill" data-filter="lawsuit" data-active="false" aria-pressed="false">Lawsuit</div>
+  <div class="pill" data-filter="drama" data-active="false" aria-pressed="false">Drama</div>
+  <div class="pill" data-filter="youtuber cease & desist" data-active="false" aria-pressed="false">Creator Issues</div>
+  <div class="pill" data-filter="roblox respond" data-active="false" aria-pressed="false">Roblox Respond</div>
+  <div class="pill" data-filter="child safety issue" data-active="false" aria-pressed="false">Child Safety Issue</div>
+</div>
+
+<div id="news"></div>
+
+<div id="empty" class="hidden">No news found.</div>
+
+<script>
+const grid = document.getElementById('news');
+const pills = Array.from(document.querySelectorAll('.pill'));
+const q = document.getElementById('q');
+const sort = document.getElementById('sort');
+const empty = document.getElementById('empty');
+
+let activeTag = 'all';
+let newsPosts = [];
+
+function normalize(s){ return s.toLowerCase().trim(); }
+
+function createCard(post) {
+  const article = document.createElement('article');
+  article.className = 'card';
+  article.dataset.date = post.date;
+  article.dataset.tags = post.tags.join(',').toLowerCase();
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = `${post.date} • ${post.tags.join(', ')}`;
+  article.appendChild(meta);
+
+  const h3 = document.createElement('h3');
+  h3.textContent = post.title;
+  article.appendChild(h3);
+
+  const p = document.createElement('p');
+  p.textContent = post.summary;
+  article.appendChild(p);
+
+  const taglist = document.createElement('div');
+  taglist.className = 'taglist';
+  post.tags.forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.dataset.type = normalize(t);
+    span.textContent = t;
+    taglist.appendChild(span);
+  });
+  article.appendChild(taglist);
+
+  const linksContainer = document.createElement('div');
+  linksContainer.style.marginTop = '0.5rem';
+
+  if(post['link-x']){
+    const xLink = document.createElement('a');
+    xLink.href = post['link-x'];
+    xLink.target = '_blank';
+    xLink.rel = 'noopener';
+    xLink.textContent = 'Show Tweet';
+    xLink.style.marginRight = '0.5rem';
+    xLink.style.color = '#1da1f2';
+    linksContainer.appendChild(xLink);
+  }
+
+  if(post.link){
+    const articleLink = document.createElement('a');
+    articleLink.href = post.link;
+    articleLink.target = '_blank';
+    articleLink.rel = 'noopener';
+    articleLink.textContent = 'Read More';
+    articleLink.style.color = '#ff4b2b';
+    linksContainer.appendChild(articleLink);
+  }
+
+  article.appendChild(linksContainer);
+
+  return article;
+}
+
+function applyFilters(){
+  const query = normalize(q.value || '');
+  let visibleCount = 0;
+  grid.querySelectorAll('.card').forEach(card => {
+    const title = normalize(card.querySelector('h3').textContent);
+    const body = normalize(card.querySelector('p').textContent);
+    const tags = normalize(card.dataset.tags || '');
+    const matchesTag = activeTag === 'all' || tags.split(',').map(t => t.trim()).includes(activeTag);
+    const matchesSearch = !query || title.includes(query) || body.includes(query);
+    const show = matchesTag && matchesSearch;
+    card.classList.toggle('hidden', !show);
+    if(show) visibleCount++;
+  });
+  empty.classList.toggle('hidden', visibleCount !== 0);
+}
+
+function applySort(){
+  const list = Array.from(grid.querySelectorAll('.card')).filter(c => !c.classList.contains('hidden'));
+  let cmp;
+  switch(sort.value){
+    case 'new': cmp = (a,b) => new Date(b.dataset.date) - new Date(a.dataset.date); break;
+    case 'old': cmp = (a,b) => new Date(a.dataset.date) - new Date(b.dataset.date); break;
+    case 'az': cmp = (a,b) => a.querySelector('h3').textContent.localeCompare(b.querySelector('h3').textContent); break;
+    case 'za': cmp = (a,b) => b.querySelector('h3').textContent.localeCompare(a.querySelector('h3').textContent); break;
+  }
+  list.sort(cmp).forEach(card => grid.appendChild(card));
+}
+
+fetch('data/news.json')
+  .then(res => res.json())
+  .then(data => {
+    newsPosts = data;
+    newsPosts.forEach(post => grid.appendChild(createCard(post)));
+    applyFilters();
+    applySort();
+  })
+  .catch(err => {
+    console.error('Failed to load news.', err);
+    empty.textContent = 'Failed to load news.';
+    empty.classList.remove('hidden');
+  });
+
+pills.forEach(btn => {
+  btn.addEventListener('click', () => {
+    pills.forEach(b => { b.dataset.active = 'false'; b.setAttribute('aria-pressed', 'false'); });
+    btn.dataset.active = 'true';
+    btn.setAttribute('aria-pressed', 'true');
+    activeTag = normalize(btn.dataset.filter);
+    applyFilters();
+    applySort();
+  });
+});
+
+q.addEventListener('input', () => { applyFilters(); applySort(); });
+sort.addEventListener('change', () => { applySort(); });
+
+</script>
+</body>
 </html>
